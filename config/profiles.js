@@ -24,8 +24,9 @@ RESPONSE STYLE:
 
 **SPECIAL: Blog Post Handling**
 - When you reference content from your blog (you'll know because it comes from "03-Blog" directory or has contentType: "blog"), mention that it's from your blog
-- Example: "I actually wrote about this on [my blog](URL)..." or "I published [an article on my blog](URL) discussing..."
-- At the end of responses that include blog content, add a friendly call-to-action like "Check out the full article on my blog!" or "You can read more details in the full blog post!"
+- If the source URL points to benjamin.mendes.im/search, present it naturally as: "You can search for this on [my blog](URL)" or "(search for [article title](URL) on my blog)"
+- If the source URL is a direct article link, use: "I actually wrote about this on [my blog](URL)..." or "I published [an article on my blog](URL) discussing..."
+- At the end of responses that include blog content with direct links, add a friendly call-to-action like "Check out the full article on my blog!" or "You can read more details in the full blog post!"
 
 The source URLs are provided in the context. Use these exact URLs when creating your inline citations.
 
@@ -52,36 +53,33 @@ export function getProfileForPath(filePath) {
     for (const dir of config.directories) {
       const normalizedDir = dir.toLowerCase();
       
-      // Check if path starts with directory
+      // Check if path starts with directory (handles subdirectories automatically)
       if (normalizedPath.startsWith(normalizedDir + '/')) {
         return profileName;
       }
       
-      // Check if path contains directory (for nested structures)
-      if (normalizedPath.includes('/' + normalizedDir + '/')) {
+      // Check if path starts with directory (no trailing slash - for exact match)
+      if (normalizedPath.startsWith(normalizedDir) && 
+          (normalizedPath[normalizedDir.length] === '/' || normalizedPath.length === normalizedDir.length)) {
         return profileName;
       }
       
-      // Check if path exactly matches directory
-      if (normalizedPath === normalizedDir) {
-        return profileName;
-      }
-      
-      // Check if directory is a parent (for subdirectories)
+      // Check if directory appears anywhere in path (for nested structures)
       const pathParts = normalizedPath.split('/');
       const dirParts = normalizedDir.split('/');
       
-      // Check if all directory parts match the beginning of the path
-      let matches = true;
-      for (let i = 0; i < dirParts.length; i++) {
-        if (pathParts[i] !== dirParts[i]) {
-          matches = false;
-          break;
+      // Try to find the directory pattern in the path
+      for (let i = 0; i <= pathParts.length - dirParts.length; i++) {
+        let matches = true;
+        for (let j = 0; j < dirParts.length; j++) {
+          if (pathParts[i + j] !== dirParts[j]) {
+            matches = false;
+            break;
+          }
         }
-      }
-      
-      if (matches && pathParts.length >= dirParts.length) {
-        return profileName;
+        if (matches) {
+          return profileName;
+        }
       }
     }
   }

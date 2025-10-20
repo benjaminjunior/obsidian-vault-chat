@@ -178,6 +178,9 @@ app.post('/api/chat', async (req, res) => {
         // User declined
         pendingResults.delete(sessionId);
         
+        const profile = profileConfig[DEFAULT_PROFILE];
+        const baseSystemPrompt = profile?.systemPrompt || profileConfig.public.systemPrompt;
+        
         const response = await anthropic.messages.create({
           model: 'claude-sonnet-4-5-20250929',
           max_tokens: 4096,
@@ -185,7 +188,7 @@ app.post('/api/chat', async (req, res) => {
             ...conversationHistory,
             { role: 'user', content: message }
           ],
-          system: `You are Ben. The user just declined to see more articles. Respond casually and ask what else you can help with. Keep it brief and friendly.`
+          system: baseSystemPrompt + `\n\nThe user just declined to see more articles. Respond casually and ask what else you can help with. Keep it brief and friendly.`
         });
         
         return res.json({
@@ -214,7 +217,15 @@ app.post('/api/chat', async (req, res) => {
         let context = 'Here are more relevant notes from your knowledge base:\n\n';
         nextBatch.forEach(chunk => {
           const cleanName = chunk.metadata?.file || chunk.name?.replace(/\.md$/, '') || 'Unknown';
-          const source = chunk.metadata?.source || chunk.url;
+          const contentType = chunk.metadata?.contentType || 'unknown';
+          let source = chunk.metadata?.source || chunk.url;
+          
+          // FALLBACK: If blog post has no source, create search link
+          if (contentType === 'blog' && (!source || source.trim().length === 0)) {
+            const searchQuery = encodeURIComponent(cleanName);
+            source = `https://benjamin.mendes.im/search/?q=${searchQuery}`;
+          }
+          
           const text = chunk.text || chunk.content;
           
           const truncatedText = text && text.length > 3000 
@@ -322,10 +333,22 @@ Keep the EXACT same formatting style as your previous response - numbered list, 
     
     res.json({
       response: response.content[0].text,
-      sourcesUsed: initialChunks.map(chunk => ({
-        name: chunk.metadata?.file || chunk.name?.replace(/\.md$/, '') || 'Unknown',
-        url: chunk.metadata?.source || chunk.url
-      })),
+      sourcesUsed: initialChunks.map(chunk => {
+        const cleanName = chunk.metadata?.file || chunk.name?.replace(/\.md$/, '') || 'Unknown';
+        const contentType = chunk.metadata?.contentType || 'unknown';
+        let url = chunk.metadata?.source || chunk.url;
+        
+        // FALLBACK: If blog post has no source, create search link
+        if (contentType === 'blog' && (!url || url.trim().length === 0)) {
+          const searchQuery = encodeURIComponent(cleanName);
+          url = `https://benjamin.mendes.im/search/?q=${searchQuery}`;
+        }
+        
+        return {
+          name: cleanName,
+          url: url
+        };
+      }),
       hasMoreResults: remainingChunks.length > 0,
       remainingCount: remainingChunks.length
     });
