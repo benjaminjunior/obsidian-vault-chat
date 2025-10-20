@@ -229,7 +229,13 @@ app.post('/api/chat', async (req, res) => {
         });
         
         const hasMore = stillRemaining.length > 0;
-        const systemPrompt = `You are Ben. Present these additional articles about the topic. ${hasMore ? `End with: "I still have ${stillRemaining.length} more articles. Want to see them?"` : 'This is the last batch - let them know these are all your findings.'}`;
+        const profile = profileConfig[DEFAULT_PROFILE];
+        const baseSystemPrompt = profile?.systemPrompt || profileConfig.public.systemPrompt;
+        
+        const systemPrompt = baseSystemPrompt + `\n\n**FOLLOW-UP BATCH INSTRUCTIONS:**
+You're showing additional articles from the same search. 
+${hasMore ? `After presenting these articles, end with: "I still have ${stillRemaining.length} more articles. Want to see them?"` : 'This is the last batch - let them know these are all your findings.'}
+Keep the EXACT same formatting style as your previous response - numbered list, no dividers, consistent styling.`;
         
         const response = await anthropic.messages.create({
           model: 'claude-sonnet-4-5-20250929',
@@ -371,4 +377,3 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔍 Max search results: ${MAX_SEARCH_RESULTS}`);
   console.log(`\n✨ Ready to chat at http://localhost:${PORT}\n`);
 });
-

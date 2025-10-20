@@ -30,14 +30,21 @@ async function indexVault() {
     process.exit(1);
   }
   
-  console.log(`✓ Found ${files.length} files\n`);
+  console.log(`✔ Found ${files.length} files\n`);
   
   const allData = [];
   let processedFiles = 0;
+  let filesWithDates = 0;
   
   for (const file of files) {
     processedFiles++;
-    console.log(`[${processedFiles}/${files.length}] Processing: ${file.name} (${file.metadata.contentType})`);
+    const hasDate = file.metadata.date ? '📅' : '  ';
+    console.log(`[${processedFiles}/${files.length}] ${hasDate} Processing: ${file.name} (${file.metadata.contentType})`);
+    
+    if (file.metadata.date) {
+      filesWithDates++;
+      console.log(`  ├─ Date: ${file.metadata.date}`);
+    }
     
     const chunks = chunkText(file.content, CHUNK_SIZE, CHUNK_OVERLAP);
     console.log(`  ├─ Created ${chunks.length} chunks`);
@@ -56,7 +63,8 @@ async function indexVault() {
         profile: file.metadata.profile,
         directory: file.metadata.directory,
         source: file.metadata.source || '',
-        contentType: file.metadata.contentType,  // NEW
+        date: file.metadata.date || '',  // NEW: Store date
+        contentType: file.metadata.contentType,
         chunkIndex: i,
         totalChunks: chunks.length
       });
@@ -78,9 +86,11 @@ async function indexVault() {
   console.log('\n✅ Indexing complete!');
   console.log(`📊 Statistics:`);
   console.log(`   - Files processed: ${processedFiles}`);
+  console.log(`   - Files with dates: ${filesWithDates} (${Math.round(filesWithDates/processedFiles*100)}%)`);
   console.log(`   - Total chunks: ${allData.length}`);
   console.log(`   - Average chunks per file: ${(allData.length / processedFiles).toFixed(1)}`);
   console.log(`\n💾 Vector database location: ${DB_PATH}`);
+  console.log(`\n💡 Tip: For date-based queries, use terms like "recent", "latest", or "newest"`);
 }
 
 indexVault().catch(error => {

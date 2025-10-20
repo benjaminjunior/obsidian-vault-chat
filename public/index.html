@@ -136,6 +136,45 @@
             border-bottom: 2px solid #7289ff;
         }
         
+        .message-content strong {
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .message-content em {
+            font-style: italic;
+            color: #e8e8e8;
+        }
+        
+        .message-content h1,
+        .message-content h2,
+        .message-content h3 {
+            font-weight: 600;
+            color: #ffffff;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .message-content h1 { font-size: 1.5rem; }
+        .message-content h2 { font-size: 1.3rem; }
+        .message-content h3 { font-size: 1.1rem; }
+        
+        /* Hide standalone horizontal rules from markdown --- */
+        .message-content hr {
+            display: none;
+        }
+        
+        /* Style for list items */
+        .message-content ol,
+        .message-content ul {
+            margin-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .message-content li {
+            margin-bottom: 0.5rem;
+        }
+        
         .sources {
             font-size: 0.75rem;
             margin-top: 0.75rem;
@@ -302,13 +341,24 @@
             if (isUser) {
                 contentDiv.textContent = content;
             } else {
-                // Convert markdown links [text](url) to HTML <a> tags
+                // Parse markdown formatting
                 let htmlContent = content;
                 
-                // Replace markdown links with HTML
+                // Convert markdown links [text](url) to HTML
                 htmlContent = htmlContent.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, function(match, text, url) {
                     return `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`;
                 });
+                
+                // Convert **bold** to <strong>
+                htmlContent = htmlContent.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+                
+                // Convert *italic* to <em> (but not already processed **)
+                htmlContent = htmlContent.replace(/(?<!\*)\*(?!\*)([^\*]+)\*(?!\*)/g, '<em>$1</em>');
+                
+                // Convert headers (##, ###, etc.)
+                htmlContent = htmlContent.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+                htmlContent = htmlContent.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+                htmlContent = htmlContent.replace(/^# (.+)$/gm, '<h1>$1</h1>');
                 
                 // Split into paragraphs
                 const paragraphs = htmlContent.split('\n\n');
@@ -316,7 +366,7 @@
                 paragraphs.forEach(para => {
                     if (para.trim()) {
                         const p = document.createElement('p');
-                        p.innerHTML = para.trim();
+                        p.innerHTML = para.trim().replace(/\n/g, '<br>');
                         contentDiv.appendChild(p);
                     }
                 });

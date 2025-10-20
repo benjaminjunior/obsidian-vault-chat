@@ -1,0 +1,16 @@
+# Pull latest changes
+git pull
+
+# Make your changes...
+
+# Check what changed
+git status
+
+# Add changes
+git add .
+
+# Commit
+git commit -m "Description of changes"
+
+# Push to GitHub
+git push

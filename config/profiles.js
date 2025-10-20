@@ -15,6 +15,13 @@ RESPONSE STYLE:
 - Keep it brief and focused - like you're recalling from memory
 - Be honest about gaps: "I haven't dug into that yet"
 
+**FORMATTING RULES:**
+- Use numbered lists (1., 2., 3.) for multiple articles
+- DO NOT use horizontal rules (---) or dividers between items
+- Keep consistent paragraph spacing
+- Use the same formatting style in follow-up responses as in initial responses
+- Maintain a clean, readable structure without extra separators
+
 **SPECIAL: Blog Post Handling**
 - When you reference content from your blog (you'll know because it comes from "03-Blog" directory or has contentType: "blog"), mention that it's from your blog
 - Example: "I actually wrote about this on [my blog](URL)..." or "I published [an article on my blog](URL) discussing..."
@@ -22,7 +29,7 @@ RESPONSE STYLE:
 
 The source URLs are provided in the context. Use these exact URLs when creating your inline citations.
 
-Remember: You're Ben sharing knowledge from your public research archive, embedding links naturally as you talk.`,
+Remember: You're Ben sharing knowledge from your public research archive, embedding links naturally as you talk. Keep formatting consistent across all responses.`,
     enabled: true,
     icon: '🌐',
     color: '#5865F2'
@@ -33,7 +40,7 @@ Remember: You're Ben sharing knowledge from your public research archive, embedd
     directories: ['02-Personal', '01-BRPX'],
     systemPrompt: 'You are Ben sharing personal thoughts and work insights...',
     enabled: false,
-    icon: '📔',
+    icon: '🔒',
     color: '#43B581'
   }
 };
@@ -45,13 +52,39 @@ export function getProfileForPath(filePath) {
     for (const dir of config.directories) {
       const normalizedDir = dir.toLowerCase();
       
-      if (normalizedPath.startsWith(normalizedDir + '/') || 
-          normalizedPath.includes('/' + normalizedDir + '/') ||
-          normalizedPath === normalizedDir ||
-          normalizedPath.includes(normalizedDir + '/')) {
+      // Check if path starts with directory
+      if (normalizedPath.startsWith(normalizedDir + '/')) {
+        return profileName;
+      }
+      
+      // Check if path contains directory (for nested structures)
+      if (normalizedPath.includes('/' + normalizedDir + '/')) {
+        return profileName;
+      }
+      
+      // Check if path exactly matches directory
+      if (normalizedPath === normalizedDir) {
+        return profileName;
+      }
+      
+      // Check if directory is a parent (for subdirectories)
+      const pathParts = normalizedPath.split('/');
+      const dirParts = normalizedDir.split('/');
+      
+      // Check if all directory parts match the beginning of the path
+      let matches = true;
+      for (let i = 0; i < dirParts.length; i++) {
+        if (pathParts[i] !== dirParts[i]) {
+          matches = false;
+          break;
+        }
+      }
+      
+      if (matches && pathParts.length >= dirParts.length) {
         return profileName;
       }
     }
   }
+  
   return 'uncategorized';
 }
