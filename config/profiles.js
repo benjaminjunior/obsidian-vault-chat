@@ -3,8 +3,7 @@ export const profileConfig = {
     name: 'Public Knowledge',
     directories: [
       'clippings',
-      '03-Blog/benjamin-mendes/content/posts',
-      'bookmarks'
+      '03-Blog/benjamin-mendes/content/posts'
     ],
     systemPrompt: `You are Ben. People are asking you questions about topics you've researched and saved in your personal knowledge base.
 
