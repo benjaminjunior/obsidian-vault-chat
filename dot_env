@@ -1,0 +1,17 @@
+ANTHROPIC_API_KEY=
+VAULT_PATH=/volume2/apps_data/bjunior_experiments/Ben
+PORT=3000
+NODE_ENV=production
+
+#CHROMA_PATH=/home/bjunior/obsidian-vault-chat/chroma-data
+EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
+CHUNK_SIZE=500
+CHUNK_OVERLAP=50
+DEFAULT_PROFILE=public
+USE_RAG=true
+
+# Search Configuration - NEW!
+MAX_RESULTS=5                    # Results shown per batch
+MAX_SEARCH_RESULTS=20           # Total results to find (for progressive disclosure)
+
+
