@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { initRAG, searchVault as ragSearch } from './lib/rag-search.js';
+import { initRAG, searchVault as ragSearch, getRecentArticles } from './lib/rag-search.js';
 import { profileConfig } from './config/profiles.js';
 
 dotenv.config();
@@ -145,6 +145,27 @@ async function searchVault(query, profile = DEFAULT_PROFILE) {
   return await keywordSearch(query);
 }
 
+// Check if this is a welcome/initial interaction
+function isWelcomeMessage(message, conversationHistory) {
+  // It's a welcome if conversation is empty and message is short/generic
+  if (conversationHistory.length > 0) return false;
+  
+  const lowerMessage = message.toLowerCase().trim();
+  const welcomePatterns = [
+    'hi', 'hey', 'hello', 'greetings', 'yo',
+    "what's up", "what can you", "what do you",
+    'help', 'start', 'begin'
+  ];
+  
+  // Check if message is very short or matches welcome patterns
+  const isShort = message.split(/\s+/).length <= 3;
+  const matchesPattern = welcomePatterns.some(pattern => 
+    lowerMessage.includes(pattern) || lowerMessage === pattern
+  );
+  
+  return isShort && matchesPattern;
+}
+
 // Check if user wants more results
 function isRequestingMoreResults(message) {
   const lowerMessage = message.toLowerCase().trim();
@@ -166,6 +187,78 @@ function isRequestingMoreResults(message) {
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, conversationHistory = [], sessionId = 'default' } = req.body;
+    
+    // Check if this is a welcome message (first interaction)
+    if (isWelcomeMessage(message, conversationHistory)) {
+      console.log('👋 Welcome message detected - showing recent articles');
+      
+      if (!ragReady) {
+        return res.json({
+          response: "Hey! I'm still getting ready - my knowledge base is loading. Give me a moment and try again!",
+          sourcesUsed: []
+        });
+      }
+      
+      // Get 5 most recent articles
+      const recentArticles = await getRecentArticles(DEFAULT_PROFILE, 5);
+      
+      if (recentArticles.length === 0) {
+        return res.json({
+          response: "Hey! I'm Ben's AI assistant, but I don't seem to have any articles indexed yet. Once Ben adds some content, I'll be able to share his latest research and writings!",
+          sourcesUsed: []
+        });
+      }
+      
+      // Build context with recent articles
+      let context = 'Here are the 5 most recent articles from your knowledge base:\n\n';
+      recentArticles.forEach(article => {
+        const cleanName = article.metadata?.file || article.name?.replace(/\.md$/, '') || 'Unknown';
+        const contentType = article.metadata?.contentType || 'unknown';
+        const source = article.metadata?.source;
+        const date = article.metadata?.date || 'no date';
+        const text = article.text || article.content;
+        
+        const truncatedText = text && text.length > 1500 
+          ? text.substring(0, 1500) + '\n\n[... content truncated ...]'
+          : text;
+        
+        const sourceInfo = source 
+          ? `[Source: ${cleanName}](${source})`
+          : `Source: ${cleanName}`;
+        
+        context += `## ${sourceInfo}\nDate: ${date}\nType: ${contentType}\n${truncatedText}\n\n---\n\n`;
+      });
+      
+      const profile = profileConfig[DEFAULT_PROFILE];
+      const systemPrompt = profile?.systemPrompt || profileConfig.public.systemPrompt;
+      
+      const welcomeSystemPrompt = systemPrompt + `\n\n**WELCOME MODE:**
+This is the user's first interaction. You're showing them the 5 most recent articles from your knowledge base.
+- Greet them warmly and casually - YOU ARE BEN speaking directly
+- Keep it natural and conversational, like you're chatting with someone who just said hi
+- Present the recent articles in an engaging numbered list format
+- For each article, include the title as a clickable link using the URLs provided in the context
+- Add a short teaser or description (1-2 sentences) about what each article covers
+- Keep it brief and friendly - don't over-explain who you are
+- End with something casual like "What would you like to know more about?" or "What are you interested in?"`;
+      
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 4096,
+        messages: [
+          { role: 'user', content: `${context}\n\nGreet the user and present these recent articles.` }
+        ],
+        system: welcomeSystemPrompt
+      });
+      
+      return res.json({
+        response: response.content[0].text,
+        sourcesUsed: recentArticles.map(article => ({
+          name: article.metadata?.file || article.name?.replace(/\.md$/, '') || 'Unknown',
+          url: article.metadata?.source || ''
+        }))
+      });
+    }
     
     // Check if user is responding to "see more" prompt
     const hasPending = pendingResults.has(sessionId);
