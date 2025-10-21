@@ -359,7 +359,7 @@
             
             messageDiv.appendChild(contentDiv);
             
-            // Sources at bottom
+            // Sources at bottom - ALL sources should be linked now
             if (!isUser && sources.length > 0) {
                 const sourcesDiv = document.createElement('div');
                 sourcesDiv.className = 'sources';
@@ -373,7 +373,8 @@
                     const sourceItem = document.createElement('div');
                     sourceItem.className = 'source-item';
                     
-                    if (source.url) {
+                    // Every source should have a URL now
+                    if (source.url && source.url.trim()) {
                         const link = document.createElement('a');
                         link.href = source.url;
                         link.target = '_blank';
@@ -381,6 +382,7 @@
                         link.textContent = `• ${source.name}`;
                         sourceItem.appendChild(link);
                     } else {
+                        // Fallback for sources without URL (shouldn't happen anymore)
                         sourceItem.textContent = `• ${source.name}`;
                     }
                     
